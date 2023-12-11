@@ -5,7 +5,7 @@ namespace Database\Seeders;
 // use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
-
+use App\Models\User;
 class UserSeeder extends Seeder
 {
     /**
@@ -13,24 +13,7 @@ class UserSeeder extends Seeder
      */
     public function run(): void
     {
-        DB::table('users')->insert([
-            [
-                'name' => 'admin',
-                'email' => 'admin@gmail.com',
-                'password' => bcrypt('123456'),
-                'created_at' => now(),
-                'updated_at' => now(),
-                'email_verified_at' => now(),
-            ],
-            [
-                'name' => 'user',
-                'email' => 'user@gmail.com',
-                'password' => bcrypt('123456'),
-                'created_at' => now(),
-                'updated_at' => now(),
-                'email_verified_at' => now(),
-            ],
-        ]);
+       User::factory(100)->create();
 
         DB::table('permissions')->insert([
             ['name' => 'review_post'],
@@ -43,7 +26,7 @@ class UserSeeder extends Seeder
         DB::table('roles')->insert([
             ['name' => 'admin'],
         ]);
-        DB::table('role_users')->insert([
+        DB::table('role_user')->insert([
             'role_id' => 1,
             'user_id' => 1,
         ]);

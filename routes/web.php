@@ -13,9 +13,7 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
-Route::get('/', function () {
-    return view('welcome');
-});
+
 
 Route::resource('users', \App\Http\Controllers\UserController::class);
 
@@ -23,10 +21,9 @@ Route::resource('users', \App\Http\Controllers\UserController::class);
 
 Auth::routes();
 
+Route::get('/', [App\Http\Controllers\HomeController::class, 'index']);
 Route::get('/home', [App\Http\Controllers\HomeController::class, 'index'])->name('home');
 
-
-// post router
-Route::resource('posts', \App\Http\Controllers\PostController::class)->middleware([
-    'auth',
-]);
+Route::group(['prefix' => 'users'], function () {
+    Route::get('/', [\App\Http\Controllers\UserController::class, 'index'])->name('users.index');
+})->middleware(['auth']);

@@ -83,6 +83,7 @@ abstract class BaseRepository implements RepositoryInterface
         return $results;
     }
 
+
     /**
      * @param null $limit
      * @param array $columns
@@ -224,5 +225,11 @@ abstract class BaseRepository implements RepositoryInterface
     {
         $this->model = $this->model->with($relations);
         return $this;
+    }
+
+
+    public function getAllWithRelationship($relationship)
+    {
+        return $this->model::with($relationship)->get();
     }
 }

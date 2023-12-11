@@ -12,4 +12,9 @@ class UserRepository extends BaseRepository
     {
         return User::class;
     }
+
+    public function getAllUsersWithRoles()
+    {
+        return $this->getAllWithRelationship('roles');
+    }
 }

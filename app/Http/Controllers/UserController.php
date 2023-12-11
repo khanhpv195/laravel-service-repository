@@ -12,6 +12,7 @@ class UserController extends Controller
 
     public function __construct(UserServices $userService)
     {
+        $this->middleware('auth');
         $this->userService = $userService;
     }
 
@@ -20,7 +21,8 @@ class UserController extends Controller
      */
     public function index()
     {
-        return $this->userService->getAll();
+        $users = $this->userService->getAllUsersWithRoles();
+        return view('users.index', compact('users'));
     }
 
     /**

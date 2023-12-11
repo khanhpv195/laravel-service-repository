@@ -43,3 +43,8 @@
         </li>
     </ul>
 </nav>
+<style>
+    .navbar-nav .dropdown:hover .dropdown-menu {
+        display: block;
+    }
+</style>

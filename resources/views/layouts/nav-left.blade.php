@@ -14,22 +14,15 @@
                     </a>
                 </li>
                 <li class="nav-item has-treeview">
-                    <a href="#" class="nav-link Production">
-                        <i class="nav-icon fas fa-th-list"></i>
+                    <a href="{{ route('users.index') }}" class="nav-link account">
+                        <i class="nav-icon fas fa-user"></i>
                         <p>
-                            {{ __('Production Plan') }}
-                            <i class="fas fa-angle-left right"></i>
+                            {{ __('Account') }}
                         </p>
                     </a>
-                    <ul class="nav nav-treeview">
-                        <li class="nav-item">
-                            <a class="nav-link production">
-                                <p>{{ __('Task') }} {{ __('Schedule') }}</p>
-                            </a>
-                        </li>
-                    </ul>
                 </li>
             </ul>
         </nav>
     </div>
+
 </aside>
