@@ -13,7 +13,7 @@ class UserServices
     }
 
 
-    public  function getAll()
+    public  function getAll(): \Illuminate\Database\Eloquent\Collection|array
     {
         return $this->userRepository->all();
     }

@@ -1,76 +1,195 @@
 <?php
 
 namespace App\Repositories;
-
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
-use Exception;
+use Illuminate\Foundation\Application;
 
-abstract class BaseRepository implements IBaseEloquentRepositoryInterface
+/**
+ * Class BaseEloquentRepository
+ * @package App\Repositories\ContractsRepository
+ */
+abstract class BaseRepository implements RepositoryInterface
 {
-    private $app;
+    /**
+     * @var Application
+     */
+    protected $app;
 
-    private $model;
+    /**
+     * @var
+     */
+    protected $model;
 
-    protected $newInstanceModel;
+    /**
+     * @return mixed
+     */
+    abstract public function model();
 
-    public function __construct()
+    /**
+     * BaseEloquentRepository constructor.
+     * @param Application $app
+     */
+    public function __construct(Application $app)
     {
-        $this->app = app();
+        $this->app = $app;
+        $this->makeModel();
+        $this->boot();
+    }
 
+    /**
+     *
+     */
+    public function boot()
+    {
+    }
+
+    /**
+     * @return Model|mixed
+     */
+    public function makeModel()
+    {
+        $model = $this->app->make($this->model());
+
+        if (!$model instanceof Model) {
+            throw new RepositoryException("Class {$this->model()} must be an instance of Illuminate\\Database\\Eloquent\\Model");
+        }
+
+        return $this->model = $model;
+    }
+
+    /**
+     *
+     */
+    public function resetModel()
+    {
         $this->makeModel();
     }
 
-    abstract public function model();
-
-    final public function makeModel()
+    /**
+     * @param array $columns
+     * @return \Illuminate\Database\Eloquent\Collection|static[]
+     */
+    public function all($columns = array('*'))
     {
-        return $this->setModel($this->model());
+        if ($this->model instanceof Builder) {
+            $results = $this->model->get($columns);
+        } else {
+            $results = $this->model->all($columns);
+        }
+
+        $this->resetModel();
+
+        return $results;
     }
 
     /**
-     * @param $column
+     * @param null $limit
+     * @param array $columns
      * @return mixed
      */
-    final public function setModel(Model $model)
+    public function paginate($limit = null, $columns = array('*'))
     {
-        $this->newInstanceModel = $this->app->make($model);
+        $limit = is_null($limit) ? config('repository.pagination.limit', 20) : $limit;
+        $results = $this->model->orderBy('id', 'DESC')->paginate($limit, $columns);
+        ;
+        $this->resetModel();
 
-        if (!$this->newInstanceModel instanceof Model)
-            throw new Exception("Class {$this->newInstanceModel} must be an instance of Illuminate\\Database\\Eloquent\\Model");
-
-        return $this->model = $this->newInstanceModel;
+        return $results;
     }
 
     /**
-     * return current model
-     *
-     * @return Model
+     * @param $id
+     * @param array $columns
+     * @return mixed
      */
-    public function getModel(): Model
+    public function find($id, $columns = array('*'))
     {
-        return $this->model;
+        $results = $this->model->findOrFail($id, $columns);
+        $this->resetModel();
+
+        return $results;
     }
 
     /**
-     * @param $column
-     * @return object
+     * @param $field
+     * @param $value
+     * @param array $columns
+     * @return mixed
      */
-    public function all($columns = ['*']): object
+    public function findByField($field, $value, $columns = array('*'))
     {
-        return $this->model->all($columns);
+        $results = $this->model->where($field, '=', $value)->get($columns);
+        $this->resetModel();
+
+        return $results;
     }
 
     /**
-     * @param $column
-     * @return object
+     * @param array $where
+     * @param array $columns
+     * @return mixed
      */
-    public function create(array $data)
+    public function findWhere(array $where, $columns = array('*'))
     {
-        return $this->model->create($data);
+        foreach ($where as $field => $value) {
+            if (is_array($value)) {
+                list($field, $condition, $val) = $value;
+                $this->model = $this->model->where($field, $condition, $val);
+            } else {
+                $this->model = $this->model->where($field, '=', $value);
+            }
+        }
+
+        $results = $this->model->get($columns);
+        $this->resetModel();
+
+        return $results;
     }
 
     /**
-     * @param $column
+     * @param $field
+     * @param array $values
+     * @param array $columns
+     * @return mixed
+     */
+    public function findWhereIn($field, array $values, $columns = array('*'))
+    {
+        $results = $this->model->whereIn($field, $values)->get($columns);
+        $this->resetModel();
+
+        return $results;
+    }
+
+    /**
+     * @param $field
+     * @param array $values
+     * @param array $columns
+     * @return mixed
+     */
+    public function findWhereNotIn($field, array $values, $columns = array('*'))
+    {
+        $results = $this->model->whereNotIn($field, $values)->get($columns);
+        $this->resetModel();
+
+        return $results;
+    }
+
+    /**
+     * @param array $attributes
+     * @return mixed
+     */
+    public function create(array $attributes)
+    {
+        $model = $this->model->newInstance($attributes);
+        $model->save();
+
+        return $model;
+    }
+
+    /**
+     * @param array $attributes
+     * @param $id
      * @return mixed
      */
     public function update(array $attributes, $id)
@@ -78,207 +197,32 @@ abstract class BaseRepository implements IBaseEloquentRepositoryInterface
         $model = $this->model->findOrFail($id);
         $model->fill($attributes);
         $model->save();
+
+        $this->resetModel();
         return $model;
     }
 
     /**
-     * @param $column
-     * @return mixed
-     */
-    public function find($id): object
-    {
-        return $this->model->find($id);
-    }
-
-    /**
-     * @param $column
-     * @return mixed
-     */
-    public function findOrFail($id): ?object
-    {
-        return $this->model->findOrFail($id);
-    }
-
-    /**
-     * @param $column
-     * @return mixed
-     */
-    public function findWhere(string $field, $condition, $columns)
-    {
-        return $this->model->where($field, $condition, $columns);
-    }
-
-    /**
-     * @param $column
-     * @return mixed
-     */
-    public function first(): object
-    {
-        return $this->model->first();
-    }
-
-    /**
-     * @param $column
-     * @return mixed
-     */
-    public function last(): object
-    {
-        return $this->model->latest()->first();
-    }
-
-    /**
-     * @param $column
-     * @return mixed
-     */ public function next($id): object
-{
-    return $this->model->where('id', '>', $id)->orderBy('id')->first();
-}
-
-    /**
-     * @param $column
-     * @return mixed
-     */ public function before($id): object
-{
-    return $this->model->where('id', '<', $id)->orderBy('id', 'desc')->first();
-}
-
-    /**
-     * @param $column
-     * @return mixed
-     */
-    public function firstOrCreate($attributes, $values)
-    {
-        // return $this->firstOrCreate();
-    }
-
-    /**
-     * @param $column
-     * @return mixed
-     */
-    public function whereIn($attribute, array $values)
-    {
-        return $this->model->whereIn($attribute, $values)->get();
-    }
-
-    /**
-     * @param $column
-     * @return mixed
-     */
-    public function max($column)
-    {
-        return $this->model->max($column);
-    }
-
-    /**
-     * @param $column
-     * @return mixed
-     */
-    public function min($column)
-    {
-        return $this->model->min($column);
-    }
-
-    /**
-     * @param $column
-     * @return mixed
-     */
-    public function avg($column)
-    {
-        return $this->model->avg($column);
-    }
-
-    /**
-     * @param $column
+     * @param $id
      * @return mixed
      */
     public function delete($id)
     {
-        $status = $this->model->destroy($id);
-        if (!$status and !is_array($id) and !empty($id)) {
-            throw new Exception(
-                "Unable to delete {$this->model()} with id: {$id}"
-            );
-        }
-        return $status;
+        $model = $this->find($id);
+        $originalModel = clone $model;
+
+        $this->resetModel();
+        $deleted = $model->delete();
+        return $deleted;
     }
 
     /**
-     * @param $column
-     * @return mixed
-     */
-    public function truncate()
-    {
-        return $this->model->truncate();
-    }
-
-    /**
-     * @param $column
-     * @return mixed
-     */
-    public function count($columns = ['*']): int
-    {
-        return $this->model->count($columns);
-    }
-
-    /**
-     * @param $column
-     * @return mixed
-     */
-    public function paginate($columns = ['*'], $perPage = 8)
-    {
-        return $this->model->paginate($perPage, $columns);
-    }
-
-    /**
-     * @param $column
-     * @return mixed
-     */
-    public function simplePaginate($limit = null, $columns = ['*'])
-    {
-        return $this->model->simplePaginate($limit, $columns);
-    }
-
-    /**
-     * @param $column
-     * @return mixed
-     */
-    public function search(array $query, $columns = ["*"])
-    {
-        //
-    }
-
-    /**
-     * @param $value
-     * @param $key
-     * @return mixed
-     */
-    public function pluck($value, $key = null)
-    {
-        $lists = $this->model->pluck($value, $key);
-
-        if (is_array($lists)) {
-            return $lists;
-        }
-
-        return $lists->all();
-    }
-
-    /**
-     * Eager load database relationships
-     * @param $column
-     * @return mixed
+     * @param $relations
+     * @return $this
      */
     public function with($relations)
     {
-        return $this->model->with($relations);
-    }
-
-    /**
-     * @param $column
-     * @return mixed
-     */
-    public function toSql()
-    {
-        return $this->model->toSql();
+        $this->model = $this->model->with($relations);
+        return $this;
     }
 }
